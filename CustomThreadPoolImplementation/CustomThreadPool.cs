@@ -98,7 +98,6 @@ namespace CustomThreadPoolImplementation
 
                     CompletedWorkItemCount++;
                     _activeThreadsCount--;
-                    Console.WriteLine("Active Threads Count" + _activeThreadsCount);
                 }
             }
         }
