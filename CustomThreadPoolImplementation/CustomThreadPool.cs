@@ -1,229 +1,372 @@
-﻿using CustomThreadPoolImplementation.Interfaces;
+﻿using System;
 
-namespace CustomThreadPoolImplementation
+namespace CustomThreadPool
 {
-    /// <summary>
-    /// Custom Implementation ThreadPool
-    /// Methods
-    /// QueueUserWorkItem;
-    /// 
-    /// </summary>
-    public class CustomThreadPool : IThreadPool
+    public class ThreadPool
     {
-        //Private Fields
+        //private Fields
+
         private int _minimumThreadsCount;
+
         private int _maximumThreadsCount;
-        private int _activeThreadsCount;
-        private bool _isOptimized = false;
-        private List<ThreadAndWork> threads;
-        private Queue<WaitCallback> queue;
+
+        private Timer? _optimizationTimer;
+
+        private Queue<WaitCallback>? _workQueue;
+
+        private List<ThreadAndState>? _threads;
+
+        private Thread _optimizedThread;
+
         private object _lock = new object();
-        private int _enqueueMethods = 0;
-        //Public Fields
-        public int PendingWorkItemCount {  get; private set; }
-        public int CompletedWorkItemCount {  get; private set; }
+
+        private int _activeThreadsCount;
+
+
+        //Public fields
+        // Public Properties
+        /// <summary>
+        /// Gets the number of pending work items in the queue.
+        /// </summary>
+        public int PendingWorkItemCount { get; private set; }
+
+        /// <summary>
+        /// Gets the number of completed work items.
+        /// </summary>
+        public int CompletedWorkItemCount { get; private set; }
+
+        /// <summary>
+        /// Gets the number of currently active threads.
+        /// </summary>
         public int ActiveThreadsCount => _activeThreadsCount;
-        public CustomThreadPool()
+
+
+        //Constants
+
+        private const int MIN_DEFAULT_THREADS_COUNT = 4;
+
+        private const int MAX_DEFAULT_THREADS_COUNT = 8;
+
+
+        //Ctors
+
+        // Constructors
+        /// <summary>
+        /// Initializes a thread pool with a specified number of minimum and maximum threads.
+        /// </summary>
+        public ThreadPool(int minimumThreadsCount, int maximumThreadsCount)
+        {
+            ThreadsCountException(minimumThreadsCount, maximumThreadsCount);
+
+            _maximumThreadsCount = maximumThreadsCount;
+            _minimumThreadsCount = minimumThreadsCount;
+
+            Initialize();
+        }
+
+
+        /// <summary>
+        /// Initializes a thread pool with a given queue of work items.
+        /// </summary>
+        public ThreadPool(Queue<WaitCallback> workQueue)
+        {
+            Initialize();
+            _workQueue = workQueue;
+
+            foreach (var item in workQueue)
+            {
+                QueueUserWorkItem(item);
+            }
+        }
+
+        /// <summary>
+        /// Initializes a thread pool with default settings.
+        /// </summary>
+        public ThreadPool()
         {
             Initialize();
         }
+
+
+        //Methods
+
+        /// <summary>
+        /// Initializes internal data structures and starts worker threads.
+        /// </summary>
         private void Initialize()
         {
-            InitializeMinAndMaxWorkerThreadsCount();
-            //Initialize Threads And Queue 
-            threads = new List<ThreadAndWork>(_minimumThreadsCount);
-            queue = new Queue<WaitCallback>();
+            _workQueue ??= new Queue<WaitCallback>();
+            _threads = new List<ThreadAndState>();
+            _optimizedThread = new Thread(Optimization)
+            {
+                IsBackground = true,
+            };
+
+            _activeThreadsCount = 0;
+
+
+            if (_minimumThreadsCount == 0)
+                _minimumThreadsCount = MIN_DEFAULT_THREADS_COUNT;
+
+            if (_maximumThreadsCount == 0)
+                _maximumThreadsCount = MAX_DEFAULT_THREADS_COUNT;
+
+
 
             for (int ThreadIndex = 0; ThreadIndex < _minimumThreadsCount; ThreadIndex++)
             {
                 Thread newThread = new Thread(ThreadWorker)
                 {
-                    IsBackground = true,
+                    IsBackground = true
                 };
+                newThread.Name = $"Thread: {ThreadIndex}";
+                Enums.ThreadState state = Enums.ThreadState.Sleep;
+                ThreadAndState newThreadAndState = new ThreadAndState(newThread, state);
 
-                newThread.Name = $"thread: {ThreadIndex}";
-                var ThreadAndWork = new ThreadAndWork(newThread, Enums.CustomThreadState.sleep);
-                threads.Add(ThreadAndWork);
-                _activeThreadsCount++;
+                _threads.Add(newThreadAndState);
                 newThread.Start(ThreadIndex);
+                _activeThreadsCount++;
             }
 
+            _optimizationTimer = new Timer(Optimization, null, 2000, 2000);
+
         }
 
-        //Initialize Min And Max Threads Count When Methods for Changing Count for Those Don't Call
-        private void InitializeMinAndMaxWorkerThreadsCount()
-        {
-            if (_minimumThreadsCount == 0)
-                _minimumThreadsCount = 4;
 
-            if (_maximumThreadsCount == 0)
-                _maximumThreadsCount = 8;
-        }
-
-        public void ThreadWorker(object state)
+        /// <summary>
+        /// Worker thread method that processes work items from the queue.
+        /// </summary>
+        private void ThreadWorker(object state)
         {
+            var ThreadAndState = _threads?.FindThreadAndState(Thread.CurrentThread.Name);
+
+            Console.WriteLine($"{Thread.CurrentThread.Name} is working");
+
             while (true)
             {
-                int index = (int)state;
-
                 WaitCallback waitCallback = null;
+
                 lock (_lock)
                 {
-                    while (queue.Count == 0)
+                    while (_workQueue.Count == 0)
                     {
-                        threads[index].State = Enums.CustomThreadState.Wait;
+
+                        ThreadAndState.ThreadState = Enums.ThreadState.Wait;
                         Monitor.Wait(_lock);
                     }
-                    queue.TryDequeue(out var result);
-                    if (result != null)
-                    {
-                        waitCallback = result;
-                        PendingWorkItemCount--;
-                    }
+                    waitCallback = _workQueue.Dequeue();
+                    ThreadAndState.ThreadState = Enums.ThreadState.Working;
+                    _activeThreadsCount++;
 
-                    threads[index].State = Enums.CustomThreadState.Working;
                 }
-
-                waitCallback?.Invoke(state);
-
-                if(queue.Count == 0 || threads.Where(thread => thread.State == Enums.CustomThreadState.Wait || thread.State == Enums.CustomThreadState.Working).Count() == threads.Count() && !_isOptimized)
+                try
                 {
-                    Thread thread = new Thread(Optimization);
-                    thread.IsBackground = true;
-                    thread.Start();
-                    _isOptimized = true;
+                    waitCallback?.Invoke(state);
                 }
-                lock (_lock)
+                catch (Exception ex)
                 {
+                    Console.WriteLine($"exception was thrwed when try to invoke some work by {Thread.CurrentThread.Name}");
 
+                    throw;
+                }
+                finally
+                {
                     CompletedWorkItemCount++;
+                    PendingWorkItemCount--;
                     _activeThreadsCount--;
                 }
             }
         }
 
-        public void GetMaxThreads(out int workerThreads, out int completionPortThreads)
+        /// <summary>
+        /// Checks and adjusts the number of threads dynamically.
+        /// </summary>
+        private void Optimization(object? state)
         {
-            //Not Supported
-            completionPortThreads = 0;
+            //DeleginThreads Optimization
+            if (DeletingHelperThreadsCondition())
+                DeletingThreasds();
 
-            workerThreads = _maximumThreadsCount;
+            //AddingThreads Optimization
+            if (AddingHelperThreadsCondition())
+                AddingThreads();
+
+            //CancelWork Optimization
+            if (CancelingHerlperCondition())
+                Cancelingwork();
         }
 
-        public void GetMinThreads(out int workerThreads, out int completionPortThreads)
-        {
-            //Not Supported
-            completionPortThreads = 0;
 
-            workerThreads = _minimumThreadsCount;
-        }
-
-        public bool QueueUserWorkItem(WaitCallback callback) => QueueUserWorkItem(callback, null);
-
-
-        public bool QueueUserWorkItem(WaitCallback callback, object? state)
+        /// <summary>
+        /// Adds a work item to the queue and notifies waiting threads.
+        /// </summary>
+        public void QueueUserWorkItem(WaitCallback callback)
         {
             if (callback == null)
-                throw new ArgumentNullException(nameof(WaitCallback), "CallBack Function Cannot be Null here!..");
+                throw new ArgumentNullException($"{nameof(callback)}", "callback function is null here");
+
             lock (_lock)
             {
-
-                queue.Enqueue(callback);
+                _workQueue?.Enqueue(callback);
                 PendingWorkItemCount++;
-
                 Monitor.PulseAll(_lock);
             }
-            return true;
         }
-        //Conditions
-
-        //AllThreads Is Activly And DoingWork But there is Item in Queue
 
 
-        //if queue count are more than workerThreadsCount (optimization) deleting  Threads that dont doing any work
-
-
-        //if working take  more time we can be repeat it after few time letter and if it doesnt work we shuld be deleting this item from queue
-
-        private void Optimization()
+        //DeleginThreads Optimization
+        /// <summary>
+        /// Checks if threads should be removed.
+        /// </summary>
+        private bool DeletingHelperThreadsCondition()
         {
-            if (CreatingHelperThreadCondition())
-            {
-                Thread.Sleep(300);
-
-                if (CreatingHelperThreadCondition())
-                {
-                    Thread newThread = new Thread(ThreadWorker)
-                    {
-                        IsBackground = true
-                    };
-                    var ThreadAndWork = new ThreadAndWork(newThread, Enums.CustomThreadState.sleep);
-                    threads.Add(ThreadAndWork);
-                    _activeThreadsCount++;
-                    newThread.Start(threads.Count - 1);
-                }
-            }
-            if (DeletingHelperThreadCondition())
-            {
-                Thread.Sleep(300);
-                if (DeletingHelperThreadCondition())
-                {
-                    var inactiveThreads = threads.Where(thread => thread.State == Enums.CustomThreadState.Wait && !queue.Any()).ToList();
-                    if (inactiveThreads.Any())
-                    {
-                        threads.RemoveAll(thread => thread.State == Enums.CustomThreadState.Wait);
-                        _activeThreadsCount = threads.Count;
-                    }
-                }
-            }
-        }
-        //Conditions
-        private bool CreatingHelperThreadCondition()
-        {
-                if (threads.Where(thread => thread.State == Enums.CustomThreadState.Working).Count() == threads.Count && _activeThreadsCount < _maximumThreadsCount && queue.Any())
-                    return true;
-
-            return false;
-        }
-        private bool DeletingHelperThreadCondition()
-        {
-            if (_activeThreadsCount > PendingWorkItemCount  && !queue.Any())
+            if (_workQueue?.Count == 0 &&
+                _threads?.FindWorkingStateThreads().Count < _threads?.Count &&
+                _threads.Count > _minimumThreadsCount)
                 return true;
             return false;
         }
 
-
-        public bool QueueUserWorkItem<TState>(Action<TState> action, TState state, bool preferLocal)
+        private void DeletingThreasds()
         {
-            throw new NotImplementedException();
+            var WaitingThreads = _threads?.FindWaitingStateThreads();
+
+            if (WaitingThreads != null)
+            {
+                lock (_lock)
+                {
+                    int DeletingThreadsCount = 0;
+
+                    _threads?.RemoveWaitingThreads(ThreadAndState =>
+                    (ThreadAndState.ThreadState == Enums.ThreadState.Wait
+                    && _threads.Count >= _minimumThreadsCount), out DeletingThreadsCount);
+
+                    _activeThreadsCount -= DeletingThreadsCount;
+                }
+            }
         }
 
-        public bool SetMaxThreads(int workerThreads, int completionPortThreads)
-        {
-            if (SetWorkerThreadsCondition(workerThreads, "Maximum worker Threads"))
-                _maximumThreadsCount = workerThreads;
 
+        //AddingThreads Optimization
+        private bool AddingHelperThreadsCondition()
+        {
+            if (_workQueue?.Count > 0 &&
+                _threads?.FindWorkingStateThreads().Count == _threads?.Count &&
+                _threads?.Count < _maximumThreadsCount)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private void AddingThreads()
+        {
+
+            Thread thread = new Thread(ThreadWorker);
+            Enums.ThreadState threadState = Enums.ThreadState.Sleep;
+
+            ThreadAndState threadAndState = new ThreadAndState(thread, threadState);
+
+            thread.Name = $"Thread: {_threads?.Count}";
+
+            _threads?.Add(threadAndState);
+
+            _activeThreadsCount++;
+
+            thread.Start();
+        }
+
+        //CancelWork Optimization
+        private bool CancelingHerlperCondition()
+        {
             return true;
         }
 
-        public bool SetMinThreads(int workerThreads, int completionPortThreads)
+        private void Cancelingwork()
         {
 
-            if (SetWorkerThreadsCondition(workerThreads, "Minimum worker Threads"))
-                _minimumThreadsCount = workerThreads;
-
-            return true;
         }
 
-        public bool SetWorkerThreadsCondition(int MinOrMaxWorkerThreads,string WorkerThreads)
+        //Exceptions
+        /// <summary>
+        /// Validates the thread count parameters.
+        /// </summary>
+        private void ThreadsCountException(int minimumThreadsCount, int maximumThreadsCount)
         {
-            if (MinOrMaxWorkerThreads <= 0)
-                throw new ArgumentException($"{WorkerThreads} must be greather than 0", MinOrMaxWorkerThreads.ToString());
+            if (minimumThreadsCount <= 0 || maximumThreadsCount <= 0)
+                throw new ArgumentOutOfRangeException(nameof(minimumThreadsCount),
+                    "Min or Max Threads Count cannot be less than 1");
 
-            if (_minimumThreadsCount >= MinOrMaxWorkerThreads)
-                throw new ArgumentException($"{WorkerThreads} must be greather than Minimum Worker Threads", MinOrMaxWorkerThreads.ToString());
-
-            return true;
+            if (minimumThreadsCount >= maximumThreadsCount)
+                throw new ArgumentOutOfRangeException(nameof(minimumThreadsCount),
+                    "Minimum count of threads cannot be greater than maximum count");
         }
+
     }
+
+    public static class ListUtils
+    {
+        /// Finds a ThreadAndState object by thread name.
+        /// </summary>
+        /// <param name="threadAndStates">The list of ThreadAndState objects.</param>
+        /// <param name="nameofThread">The name of the thread to find.</param>
+        /// <returns>The found ThreadAndState object.</returns>
+        /// <exception cref="Exception">Thrown if no thread with the specified name is found.</exception>
+        public static ThreadAndState FindThreadAndState(this List<ThreadAndState> threadAndStates, string nameofThread)
+        {
+            var ThreadAndState = threadAndStates.Where(lookingThreadAndSate => lookingThreadAndSate?.Thread?.Name == nameofThread).FirstOrDefault();
+
+            if (ThreadAndState == null)
+                throw new Exception($"thread By name {nameofThread} isnt find");
+
+            return ThreadAndState;
+        }
+        /// <summary>
+        /// Finds all threads that are in the Working state.
+        /// </summary>
+        /// <param name="threadAndStates">The list of ThreadAndState objects.</param>
+        /// <returns>A list of ThreadAndState objects in the Working state.</returns>
+        public static List<ThreadAndState> FindWorkingStateThreads(this List<ThreadAndState> threadAndStates)
+        {
+            return threadAndStates.Where(ThreadAndState => ThreadAndState.ThreadState == Enums.ThreadState.Working).ToList();
+        }
+
+        /// <summary>
+        /// Finds all threads that are in the Sleeping state.
+        /// </summary>
+        /// <param name="threadAndStates">The list of ThreadAndState objects.</param>
+        /// <returns>A list of ThreadAndState objects in the Sleeping state.</returns>
+        public static List<ThreadAndState> FindSleepingStateThreads(this List<ThreadAndState> threadAndStates)
+        {
+            return threadAndStates.Where(ThreadAndState => ThreadAndState.ThreadState == Enums.ThreadState.Sleep).ToList();
+        }
+
+        /// <summary>
+        /// Finds all threads that are in the Waiting state.
+        /// </summary>
+        /// <param name="threadAndStates">The list of ThreadAndState objects.</param>
+        /// <returns>A list of ThreadAndState objects in the Waiting state.</returns>
+        public static List<ThreadAndState> FindWaitingStateThreads(this List<ThreadAndState> threadAndStates)
+        {
+            return threadAndStates.Where(ThreadAndState => ThreadAndState.ThreadState == Enums.ThreadState.Wait).ToList();
+        }
+
+        /// <summary>
+        /// Removes all threads that satisfy the given condition and returns the modified list.
+        /// </summary>
+        /// <param name="threadAndStates">The list of ThreadAndState objects.</param>
+        /// <param name="Condition">The condition used to filter which threads to remove.</param>
+        /// <param name="Count">Outputs the number of removed threads.</param>
+        /// <returns>The modified list of ThreadAndState objects.</returns>
+        public static List<ThreadAndState> RemoveWaitingThreads(this List<ThreadAndState> threadAndStates,
+            Func<ThreadAndState, bool> Condition, out int Count)
+        {
+            Count = threadAndStates.Count(Condition);
+            threadAndStates.RemoveAll(item => Condition(item));
+            return threadAndStates;
+        }
+
+    }
+
 }

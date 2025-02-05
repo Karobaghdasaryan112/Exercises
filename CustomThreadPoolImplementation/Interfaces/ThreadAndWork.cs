@@ -1,24 +1,17 @@
-﻿using CustomThreadPoolImplementation.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace CustomThreadPoolImplementation.Interfaces
+﻿using System;
+namespace CustomThreadPool
 {
-    public class ThreadAndWork
+    public class ThreadAndState
     {
-        public Thread Thread { get; set; }
-        public CustomThreadState State { get; set; }
-        public ThreadAndWork(Thread thread, CustomThreadState State)
+        public Thread? Thread { get; set; }
+        public Enums.ThreadState ThreadState { get; set; }
+
+        public ThreadAndState(Thread thread, Enums.ThreadState threadState)
         {
             Thread = thread;
-            this.State = State;
+            ThreadState = threadState;
         }
-        public ThreadAndWork()
-        {
 
-        }
+
     }
 }

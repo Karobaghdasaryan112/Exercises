@@ -4,12 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CustomThreadPoolImplementation.Enums
+namespace CustomThreadPool.Enums
 {
-    public enum CustomThreadState
+    public enum ThreadState
     {
-        Wait = 0,
-        Working = 1,
-        sleep = 2,
+        Sleep = 0,
+        Wait = 1,
+        Working = 2,
     }
 }
