@@ -1,5 +1,4 @@
 ﻿
-
 namespace Disposable.CompositeDispose
 {
     public class ResourceMeneger : IDisposable

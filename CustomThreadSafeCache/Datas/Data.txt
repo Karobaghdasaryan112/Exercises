@@ -1,0 +1,298 @@
+[
+  {
+    "BookId": 1,
+    "Title": "1984",
+    "Author": "George Orwell",
+    "Year": 1949,
+    "Id": 1
+  },
+  {
+    "BookId": 2,
+    "Title": "To Kill a Mockingbird",
+    "Author": "Harper Lee",
+    "Year": 1960,
+    "Id": 2
+  },
+  {
+    "BookId": 3,
+    "Title": "The Great Gatsby",
+    "Author": "F. Scott Fitzgerald",
+    "Year": 1925,
+    "Id": 3
+  },
+  {
+    "BookId": 4,
+    "Title": "Moby Dick",
+    "Author": "Herman Melville",
+    "Year": 1851,
+    "Id": 4
+  },
+  {
+    "BookId": 5,
+    "Title": "War and Peace",
+    "Author": "Leo Tolstoy",
+    "Year": 1869,
+    "Id": 5
+  },
+  {
+    "BookId": 6,
+    "Title": "Pride and Prejudice",
+    "Author": "Jane Austen",
+    "Year": 1813,
+    "Id": 6
+  },
+  {
+    "BookId": 7,
+    "Title": "The Hobbit",
+    "Author": "J.R.R. Tolkien",
+    "Year": 1937,
+    "Id": 7
+  },
+  {
+    "BookId": 8,
+    "Title": "Harry Potter",
+    "Author": "J.K. Rowling",
+    "Year": 1997,
+    "Id": 8
+  },
+  {
+    "BookId": 9,
+    "Title": "The Catcher in the Rye",
+    "Author": "J.D. Salinger",
+    "Year": 1951,
+    "Id": 9
+  },
+  {
+    "BookId": 10,
+    "Title": "Ulysses",
+    "Author": "James Joyce",
+    "Year": 1922,
+    "Id": 10
+  }
+]
+[
+  {
+    "OrderId": 1,
+    "UserId": 1,
+    "ProductId": 2,
+    "Quantity": 1,
+    "Status": "Completed",
+    "Id": 1
+  },
+  {
+    "OrderId": 2,
+    "UserId": 2,
+    "ProductId": 1,
+    "Quantity": 1,
+    "Status": "Pending",
+    "Id": 2
+  },
+  {
+    "OrderId": 3,
+    "UserId": 3,
+    "ProductId": 5,
+    "Quantity": 2,
+    "Status": "Shipped",
+    "Id": 3
+  },
+  {
+    "OrderId": 4,
+    "UserId": 4,
+    "ProductId": 4,
+    "Quantity": 3,
+    "Status": "Processing",
+    "Id": 4
+  },
+  {
+    "OrderId": 5,
+    "UserId": 5,
+    "ProductId": 3,
+    "Quantity": 1,
+    "Status": "Completed",
+    "Id": 5
+  },
+  {
+    "OrderId": 6,
+    "UserId": 6,
+    "ProductId": 7,
+    "Quantity": 1,
+    "Status": "Pending",
+    "Id": 6
+  },
+  {
+    "OrderId": 7,
+    "UserId": 7,
+    "ProductId": 6,
+    "Quantity": 4,
+    "Status": "Shipped",
+    "Id": 7
+  },
+  {
+    "OrderId": 8,
+    "UserId": 8,
+    "ProductId": 8,
+    "Quantity": 1,
+    "Status": "Processing",
+    "Id": 8
+  },
+  {
+    "OrderId": 9,
+    "UserId": 9,
+    "ProductId": 10,
+    "Quantity": 2,
+    "Status": "Completed",
+    "Id": 9
+  },
+  {
+    "OrderId": 10,
+    "UserId": 10,
+    "ProductId": 9,
+    "Quantity": 1,
+    "Status": "Shipped",
+    "Id": 10
+  }
+]
+[
+  {
+    "ProductId": 1,
+    "Name": "Laptop",
+    "Price": 1200,
+    "Category": "Electronics",
+    "Id": 1
+  },
+  {
+    "ProductId": 2,
+    "Name": "Smartphone",
+    "Price": 800,
+    "Category": "Electronics",
+    "Id": 2
+  },
+  {
+    "ProductId": 3,
+    "Name": "Keyboard",
+    "Price": 100,
+    "Category": "Accessories",
+    "Id": 3
+  },
+  {
+    "ProductId": 4,
+    "Name": "Mouse",
+    "Price": 50,
+    "Category": "Accessories",
+    "Id": 4
+  },
+  {
+    "ProductId": 5,
+    "Name": "Monitor",
+    "Price": 300,
+    "Category": "Electronics",
+    "Id": 5
+  },
+  {
+    "ProductId": 6,
+    "Name": "Headphones",
+    "Price": 150,
+    "Category": "Audio",
+    "Id": 6
+  },
+  {
+    "ProductId": 7,
+    "Name": "Webcam",
+    "Price": 120,
+    "Category": "Accessories",
+    "Id": 7
+  },
+  {
+    "ProductId": 8,
+    "Name": "Printer",
+    "Price": 400,
+    "Category": "Office",
+    "Id": 8
+  },
+  {
+    "ProductId": 9,
+    "Name": "Desk Chair",
+    "Price": 250,
+    "Category": "Furniture",
+    "Id": 9
+  },
+  {
+    "ProductId": 10,
+    "Name": "USB Drive",
+    "Price": 20,
+    "Category": "Accessories",
+    "Id": 10
+  }
+]
+[
+  {
+    "UserId": 1,
+    "Name": "Alice",
+    "Email": "alice@example.com",
+    "Role": "User",
+    "Id": 1
+  },
+  {
+    "UserId": 2,
+    "Name": "Bob",
+    "Email": "bob@example.com",
+    "Role": "Admin",
+    "Id": 2
+  },
+  {
+    "UserId": 3,
+    "Name": "Charlie",
+    "Email": "charlie@example.com",
+    "Role": "User",
+    "Id": 3
+  },
+  {
+    "UserId": 4,
+    "Name": "David",
+    "Email": "david@example.com",
+    "Role": "User",
+    "Id": 4
+  },
+  {
+    "UserId": 5,
+    "Name": "Eve",
+    "Email": "eve@example.com",
+    "Role": "Admin",
+    "Id": 5
+  },
+  {
+    "UserId": 6,
+    "Name": "Frank",
+    "Email": "frank@example.com",
+    "Role": "User",
+    "Id": 6
+  },
+  {
+    "UserId": 7,
+    "Name": "Grace",
+    "Email": "grace@example.com",
+    "Role": "User",
+    "Id": 7
+  },
+  {
+    "UserId": 8,
+    "Name": "Hank",
+    "Email": "hank@example.com",
+    "Role": "Admin",
+    "Id": 8
+  },
+  {
+    "UserId": 9,
+    "Name": "Ivy",
+    "Email": "ivy@example.com",
+    "Role": "User",
+    "Id": 9
+  },
+  {
+    "UserId": 10,
+    "Name": "Jack",
+    "Email": "jack@example.com",
+    "Role": "User",
+    "Id": 10
+  }
+]
